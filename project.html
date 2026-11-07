@@ -112,40 +112,6 @@
 (function () {
   if (window === window.top) return;
 
-  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
-  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
-  // across multiple labels.
-  function matchesAllowedOrigin(origin) {
-    if (!origin) return false;
-    for (const entry of allowedParentOrigins) {
-      if (!entry.includes("*")) {
-        if (entry === origin) return true;
-        continue;
-      }
-      const pattern = new RegExp(
-        "^" +
-          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
-          "$",
-      );
-      if (pattern.test(origin)) return true;
-    }
-    return false;
-  }
-
-  // Trust decision: when the sender is same-origin-visible (event.origin is a
-  // real origin like https://www.perplexity.ai) we trust event.origin directly.
-  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
-  // broker's stamped `parentOrigin` to identify the top window. The fallback
-  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
-  // on the response path (see postToTrustedTop) to ensure replies can't be
-  // delivered to anyone but the actual top window of that claimed origin.
-  function getTrustedParentOrigin(event) {
-    const forwardedParentOrigin =
-      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
-    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
-    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
-  }
-
   // All responses go to window.top with targetOrigin = the allowlisted origin.
   // An attacker that iframes us inside their own null-origin broker can claim
   // any parentOrigin they like, but the browser will drop the reply whenever
